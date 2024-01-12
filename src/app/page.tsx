@@ -1,95 +1,104 @@
-import Image from 'next/image'
+'use client'
+
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import JSConfetti from 'js-confetti';
+
+import { Keyboard } from '@/components/keyboard';
+import { Progress } from '@/components/progress';
+
 import styles from './page.module.css'
 
 export default function Home() {
+  const allNumbers = 10 * (10 + 1) / 2;
+  const [total, setTotal] = useState<number>();
+  const [left, setLeft] = useState<number>();
+  const [disabled, setDisabled] = useState<number[]>([]);
+  const [done, setDone] = useState(false);
+
+  const confettiRef = useRef<JSConfetti>();
+  const cacheRef = useRef<string[]>([]);
+
+  const init = useCallback(() => {
+    const total = Math.floor(Math.random() * 10) + 1;
+    const left = Math.floor(Math.random() * total + 1);
+    const key = `${total}-${left}`;
+
+    if (cacheRef.current.length === allNumbers) {
+      confettiRef.current?.addConfetti({
+        emojis: ['🦄'],
+      });
+      setDone(true);
+      return;
+    }
+
+    if (cacheRef.current.includes(key)) {
+      console.log('again', key);
+      init();
+      return;
+    }
+
+    setTotal(total);
+    setLeft(left);
+
+    cacheRef.current.push(key);
+
+    setDisabled([]);
+  }, [])
+
+  const right = useMemo(() => {
+    if(!total || !left) return 0;
+
+    return total - left;
+  }, [total, left]);
+
+  function keyboardHandler(key: number) {
+    if (key !== right) {
+      setDisabled([...disabled, key]);
+      return
+    }
+
+    confettiRef.current?.addConfetti();
+
+    init();
+  }
+
+  useEffect(() => {
+    confettiRef.current = new JSConfetti();
+
+    init();
+  }, [init]);
+  ;
   return (
     <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+      { done ? (
+        <div className={styles.end}>
+          EINDE!
         </div>
-      </div>
+      ) : (
+        <>
+          <div className={styles.shape}>
+            <div className={styles.total}>
+              <div className={styles.box}>
+                { total }
+              </div>
+            </div>
 
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
+            <div className={styles.left}>
+              <div className={styles.box}>
+                { left }
+              </div>
+            </div>
 
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
+            <div className={styles.right}>
+              <div className={styles.box} />
+            </div>
+          </div>
 
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
+          <Keyboard disabled={disabled} onClick={keyboardHandler} />
 
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore starter templates for Next.js.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
+          <Progress current={cacheRef.current.length} max={allNumbers} />
+        </>
+      )}
     </main>
   )
 }
